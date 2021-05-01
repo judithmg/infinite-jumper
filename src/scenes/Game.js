@@ -46,11 +46,25 @@ export default class Game extends Phaser.Scene {
 
     /** @type {Phaser.Physics.Arcade.Sprite} */
     const carrot = this.carrots.get(sprite.x, y, "carrot");
+
+    carrot.setActive(true);
+    carrot.setVisible(true);
     this.add.existing(carrot);
 
-    // update the physics body size
+    // update the physics body size, so it doesn't fall off the platform
     carrot.body.setSize(carrot.width, carrot.height);
+    this.physics.world.enable(carrot);
     return carrot;
+  }
+
+  /**
+   * @param {Phaser.Physics.Arcade.Sprite} player
+   * @param {Carrot} carrot
+   */
+  handleCollectCarrot(player, carrot) {
+    this.carrots.kill(carrot);
+
+    this.physics.world.disableBody(carrot.body);
   }
 
   create() {
@@ -89,19 +103,26 @@ export default class Game extends Phaser.Scene {
       .sprite(240, 320, "bunny-stand")
       .setScale(0.5);
 
+    // CARROT
+    this.carrots = this.physics.add.group({
+      classType: Carrot,
+    });
+
     this.physics.add.collider(this.platforms, this.player);
+    this.physics.add.collider(this.platforms, this.carrots);
+    this.physics.add.overlap(
+      this.player,
+      this.carrots,
+      this.handleCollectCarrot,
+      undefined,
+      this
+    );
 
     this.player.body.checkCollision.up = false;
     this.player.body.checkCollision.left = false;
     this.player.body.checkCollision.right = false;
     this.cameras.main.startFollow(this.player);
     this.cameras.main.setDeadzone(this.scale.width * 1.5);
-
-    // CARROT
-    this.carrots = this.physics.add.group({
-      classType: Carrot,
-    });
-    this.physics.add.collider(this.platforms, this.carrots);
 
     // MOVING
 
