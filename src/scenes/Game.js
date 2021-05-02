@@ -5,14 +5,6 @@ export default class Game extends Phaser.Scene {
   constructor() {
     super("game");
   }
-  preload() {
-    this.load.image("background", "src/assets/bg_layer1.png");
-    this.load.image("platform-b", "src/assets/ground_grass.png");
-    this.load.image("platform-s", "src/assets/ground_grass_small.png");
-    this.load.image("bunny-stand", "src/assets/bunny1_stand.png");
-    this.load.image("carrot", "src/assets/carrot.png");
-  }
-
   // added here so we can later use him on update() and create()
   /** @type {Phaser.Physics.Arcade.Sprite} */
   player;
@@ -73,8 +65,7 @@ export default class Game extends Phaser.Scene {
 
     this.carrotsCollected++;
 
-    const value = `Carrots: ${this.carrotsCollected}`;
-    this.carrotsCollectedText.text = value;
+    this.carrotsCollectedText.text = `Carrots: ${this.carrotsCollected}`;
   }
 
   findBottomPlatform() {
@@ -83,12 +74,27 @@ export default class Game extends Phaser.Scene {
 
     for (let i = 0; i < platforms.length; i++) {
       const platform = platforms[i];
+      // check for platforms that arent above current platform
       if (platform.y < bottomPlatform.y) {
         continue;
       }
       bottomPlatform = platform;
     }
     return bottomPlatform;
+  }
+
+  init() {
+    // set carrots to 0 for when the game re-starts
+    this.carrotsCollected = 0;
+  }
+
+  preload() {
+    this.load.image("background", "src/assets/bg_layer1.png");
+    this.load.image("platform-b", "src/assets/ground_grass.png");
+    this.load.image("platform-s", "src/assets/ground_grass_small.png");
+    this.load.image("bunny-stand", "src/assets/bunny1_stand.png");
+    this.load.image("bunny-jump", "src/assets/bunny1_jump.png");
+    this.load.image("carrot", "src/assets/carrot.png");
   }
 
   create() {
@@ -121,13 +127,11 @@ export default class Game extends Phaser.Scene {
       body.updateFromGameObject();
     }
 
-    const style = {
-      color: "#000",
-      fontSize: 24,
-    };
-
     this.carrotsCollectedText = this.add
-      .text(240, 10, "Carrots: 0", style)
+      .text(240, 10, "Carrots: 0", {
+        color: "#000",
+        fontSize: 24,
+      })
       .setScrollFactor(0)
       .setOrigin(0.5, 0);
 
@@ -145,6 +149,10 @@ export default class Game extends Phaser.Scene {
     // COLLISIONS
 
     this.physics.add.collider(this.platforms, this.player);
+
+    this.player.body.checkCollision.up = false;
+    this.player.body.checkCollision.left = false;
+    this.player.body.checkCollision.right = false;
     this.physics.add.collider(this.platforms, this.carrots);
     this.physics.add.overlap(
       this.player,
@@ -153,10 +161,6 @@ export default class Game extends Phaser.Scene {
       undefined,
       this
     );
-
-    this.player.body.checkCollision.up = false;
-    this.player.body.checkCollision.left = false;
-    this.player.body.checkCollision.right = false;
 
     // MOVING
 
@@ -169,7 +173,15 @@ export default class Game extends Phaser.Scene {
   update() {
     const touchingDown = this.player.body.touching.down;
 
-    touchingDown ? this.player.setVelocityY(-300) : null;
+    if (touchingDown) {
+      this.player.setVelocityY(-300);
+      this.player.setTexture("bunny-jump");
+    }
+
+    const vy = this.player.body.velocity.y;
+    vy > 0 && this.player.texture.key !== "bunny-stand"
+      ? this.player.setTexture("bunny-stand")
+      : null;
 
     // left and right movement when jumping
     if (this.cursors.left.isDown && !touchingDown) {
@@ -190,7 +202,6 @@ export default class Game extends Phaser.Scene {
       if (platform.y >= scrollY + 700) {
         platform.y = scrollY - Phaser.Math.Between(50, 100);
         platform.body.updateFromGameObject();
-
         this.addCarrotAbove(platform);
       }
     });
@@ -198,7 +209,7 @@ export default class Game extends Phaser.Scene {
     this.horizontalWrap(this.player);
 
     const bottomPlatform = this.findBottomPlatform();
-    bottomPlatform.y + 200 c< this.player.y
+    bottomPlatform.y + 200 < this.player.y
       ? this.scene.start("game-over")
       : null;
   }
