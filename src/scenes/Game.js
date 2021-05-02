@@ -26,6 +26,11 @@ export default class Game extends Phaser.Scene {
   /** @type {Phaser.Types.Input.Keyboard.CursorKeys} */
   cursors;
 
+  carrotsCollected = 0;
+
+  /** @type {Phaser.GameObjects.Text} */
+  carrotsCollectedText;
+
   /*** @param {Phaser.GameObjects.Sprite} sprite */
   horizontalWrap(sprite) {
     const halfWidth = sprite.displayWidth * 0.5;
@@ -62,13 +67,32 @@ export default class Game extends Phaser.Scene {
    * @param {Carrot} carrot
    */
   handleCollectCarrot(player, carrot) {
-    this.carrots.kill(carrot);
+    this.carrots.killAndHide(carrot);
 
     this.physics.world.disableBody(carrot.body);
+
+    this.carrotsCollected++;
+
+    const value = `Carrots: ${this.carrotsCollected}`;
+    this.carrotsCollectedText.text = value;
+  }
+
+  findBottomPlatform() {
+    const platforms = this.platforms.getChildren();
+    let bottomPlatform = platforms[0];
+
+    for (let i = 0; i < platforms.length; i++) {
+      const platform = platforms[i];
+      if (platform.y < bottomPlatform.y) {
+        continue;
+      }
+      bottomPlatform = platform;
+    }
+    return bottomPlatform;
   }
 
   create() {
-    // BACKGROUND
+    // BACKGROUND, STYLES
 
     this.add.image(240, 320, "background").setScrollFactor(1, 0);
 
@@ -97,6 +121,16 @@ export default class Game extends Phaser.Scene {
       body.updateFromGameObject();
     }
 
+    const style = {
+      color: "#000",
+      fontSize: 24,
+    };
+
+    this.carrotsCollectedText = this.add
+      .text(240, 10, "Carrots: 0", style)
+      .setScrollFactor(0)
+      .setOrigin(0.5, 0);
+
     // PLAYER
 
     this.player = this.physics.add
@@ -107,6 +141,8 @@ export default class Game extends Phaser.Scene {
     this.carrots = this.physics.add.group({
       classType: Carrot,
     });
+
+    // COLLISIONS
 
     this.physics.add.collider(this.platforms, this.player);
     this.physics.add.collider(this.platforms, this.carrots);
@@ -121,11 +157,11 @@ export default class Game extends Phaser.Scene {
     this.player.body.checkCollision.up = false;
     this.player.body.checkCollision.left = false;
     this.player.body.checkCollision.right = false;
-    this.cameras.main.startFollow(this.player);
-    this.cameras.main.setDeadzone(this.scale.width * 1.5);
 
     // MOVING
 
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setDeadzone(this.scale.width * 1.5);
     this.cursors = this.input.keyboard.createCursorKeys();
   }
 
@@ -160,5 +196,10 @@ export default class Game extends Phaser.Scene {
     });
 
     this.horizontalWrap(this.player);
+
+    const bottomPlatform = this.findBottomPlatform();
+    bottomPlatform.y + 200 c< this.player.y
+      ? this.scene.start("game-over")
+      : null;
   }
 }
